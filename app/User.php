@@ -4,8 +4,9 @@ namespace App;
 
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Model; 
 
-class User extends Authenticatable
+class User extends Authenticatable  
 {
     use Notifiable;
 
@@ -13,9 +14,9 @@ class User extends Authenticatable
      * The attributes that are mass assignable.
      *
      * @var array
-     */
+     */      
     protected $fillable = [
-        'name', 'email', 'password',
+        's_id','name', 'email', 'password', 'dob', 'gender'
     ];
 
     /**
@@ -26,4 +27,27 @@ class User extends Authenticatable
     protected $hidden = [
         'password', 'remember_token',
     ];
+     
+    //boot model
+
+    public static function boot(){
+        parent::boot();
+
+        static::creating(function($user){
+            $user->token = str_random(40);
+        });
+    }
+
+    public function hasActivated(){
+          $this->activated = 1;
+          $this->token = null;
+          $this->save();
+        }
 }
+
+
+
+/**
+* 
+*/
+

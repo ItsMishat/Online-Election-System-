@@ -2,10 +2,18 @@
 
 namespace App\Http\Controllers\Auth;
 
+
+
+use Mail;
 use App\User;
+use Validator;
+use Illuminate\Http\Request;
+use App\Mail\ConfirmationEmail;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Validator;
+
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Foundation\Auth\RegistersUsers;
+use Illuminate\View\Middleware\ShareErrorsFromSession; 
 
 class RegisterController extends Controller
 {
@@ -23,11 +31,11 @@ class RegisterController extends Controller
     use RegistersUsers;
 
     /**
-     * Where to redirect users after registration.
+     * Where to redirect users after login / registration.
      *
      * @var string
      */
-    protected $redirectTo = '/home';
+    protected $redirectTo = '/profile';
 
     /**
      * Create a new controller instance.
@@ -38,7 +46,6 @@ class RegisterController extends Controller
     {
         $this->middleware('guest');
     }
-
     /**
      * Get a validator for an incoming registration request.
      *
@@ -48,24 +55,48 @@ class RegisterController extends Controller
     protected function validator(array $data)
     {
         return Validator::make($data, [
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:6|confirmed',
+            's_id' => 'unique:users|required|max:255|regex:/^131-35-\d{3}$/',
+            'name' => 'required|max:255',
+            'email' => 'unique:users|required|email|max:255',
+            'dob' => 'required|max:255',
+            'gender' => 'required|',
+            'password' => 'required|min:6|confirmed',
         ]);
     }
-
+    
     /**
      * Create a new user instance after a valid registration.
      *
      * @param  array  $data
-     * @return \App\User
+     * @return User
      */
     protected function create(array $data)
     {
         return User::create([
+            's_id' => $data['s_id'],
             'name' => $data['name'],
             'email' => $data['email'],
+            'dob' => $data['dob'],
+            'gender' => $data['gender'],
             'password' => bcrypt($data['password']),
         ]);
     }
+
+        public function register(Request $request)
+    {
+        $this->validator($request->all())->validate();
+
+        event(new Registered($user = $this->create($request->all())));
+
+        Mail::to($user->email)->send(new ConfirmationEmail($user));
+
+        return back()-> with('status','Please confirm your E-mail address');
+    }
+
+    public function confirmEmail($token){
+
+        User::whereToken($token)->firstOrFail()->hasActivated(); 
+        return redirect('login')->with('status', 'Account activated, you may proceed.');
+    }
+
 }
